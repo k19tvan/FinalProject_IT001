@@ -76,15 +76,18 @@ def train_model(X, y):
     X_display = None
     
     with st.spinner('Calculating SHAP values...'):
+        
         explainer = shap.LinearExplainer(model, X_train)
         shap_values = explainer.shap_values(X_test)
         
+        print(X_test)
         feature_importance = pd.DataFrame({
             'Feature': X.columns,
             'Shapley Value': shap_values.mean(axis=0)
         })
-        feature_importance = feature_importance.sort_values('Shapley Value', ascending=False)
         
+        feature_importance = feature_importance.sort_values('Shapley Value', ascending=False)
+
         X_display = X_test
 
     joblib.dump(model, 'model.pkl')
