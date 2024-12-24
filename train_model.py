@@ -16,43 +16,42 @@ df = pd.read_csv('customer_churn.csv')
 
 # Preprocessing
 
-df['TotalCharges'] = pd.to_numeric(df.TotalCharges, errors='coerce')
+df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
 df = df.dropna(subset=['TotalCharges'])
 df['TotalCharges'] = df['TotalCharges'].astype('float64')
 
-le = LabelEncoder()
-df['Churn'] = le.fit_transform(df['Churn'])
 X_v = df.drop('Churn', axis=1)
-y = df['Churn']
+y = df['Churn'].map({'Yes': 1, 'No': 0})
 
 X_num = X_v.select_dtypes(include=['int64', 'float64'])
 X_cat = X_v.select_dtypes(include=['object'])
-X_cat = X_cat.drop("customerID", axis = 1)
+X_cat = X_cat.drop("customerID", axis=1)
 
-label_encoder = LabelEncoder()
+label_encoders = {}
 features_one_hot = ["Contract", "PaymentMethod", "InternetService"]
 
 for col in X_cat.columns:
     if col not in features_one_hot:
-        X_cat[col] = label_encoder.fit_transform(X_cat[col])
+        label_encoders[col] = LabelEncoder()
+        X_cat[col] = label_encoders[col].fit_transform(X_cat[col])
+
+one_hot_encodings = {}
+for col in features_one_hot:
+    one_hot_encodings[col] = sorted(X_cat[col].unique())
 
 X_cat = pd.get_dummies(X_cat, columns=features_one_hot, drop_first=False)
 X_cat = X_cat.astype(int)
 
 X = pd.concat([X_num, X_cat], axis=1)
-
-X = X.drop(["StreamingTV", "StreamingMovies", "MultipleLines", "PhoneService", "gender"], axis = 1)
-
-# Data train
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=40, stratify=y)
+X = X.drop(["StreamingTV", "StreamingMovies", "MultipleLines", "PhoneService", "gender"], axis=1)
 
 scaler = StandardScaler()
 num_cols = list(X_num.columns)
+X[num_cols] = scaler.fit_transform(X[num_cols])
 
-for feature in num_cols:
-    X_train[feature] = scaler.fit_transform(X_train[feature].values.reshape(-1, 1))
-    X_test[feature] = scaler.transform(X_test[feature].values.reshape(-1, 1))
+
+# Data train
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=40, stratify=y)
 
 lr_model = LogisticRegression()
 lr_model.fit(X_train, y_train)
@@ -119,5 +118,5 @@ print(feature_importance)
 shap.summary_plot(shap_values, X_test, feature_names=feature_names)
 
 pickle.dump(lr_model, open('lr_model.pkl', 'wb'))
-pickle.dump(scaler, open('scaler.pkl', 'wb'))
-pickle.dump(label_encoder, open('label_encoder.pkl', 'wb'))
+# pickle.dump(scaler, open('scaler.pkl', 'wb'))
+# pickle.dump(label_encoder, open('label_encoder.pkl', 'wb'))
